@@ -183,7 +183,8 @@ password manager - don't leave it on disk.
   CloudPanel and runs `dploy deploy <ref>`. Also runnable manually
   (Actions -> Deploy to CloudPanel -> Run workflow) against any branch or
   tag.
-- **`.github/workflows/sync-upstream.yml`** - runs daily, checks
+- **`.github/workflows/sync-upstream.yml`** - runs monthly (1st of the
+  month), checks
   `RobinLinus/snapdrop:master` for new commits. If there are any, it force-
   pushes them onto a `sync/upstream` branch and opens (or refreshes) a PR
   into `master`. It never pushes to `master` directly, so upstream changes
