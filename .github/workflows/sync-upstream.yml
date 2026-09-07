@@ -1,0 +1,56 @@
+name: Sync with upstream
+
+# Keeps this fork aware of RobinLinus/snapdrop. Never pushes to master
+# directly - it opens/updates a PR from sync/upstream so a human reviews
+# upstream changes before they reach production (a push to master triggers
+# deploy.yml).
+
+on:
+  schedule:
+    - cron: '17 5 * * *' # daily
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: master
+
+      - name: Fetch upstream
+        run: git fetch https://github.com/RobinLinus/snapdrop.git master:refs/remotes/upstream/master
+
+      - name: Compare and update sync branch
+        id: compare
+        run: |
+          set -e
+          if git merge-base --is-ancestor upstream/master HEAD; then
+            echo "up_to_date=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "up_to_date=false" >> "$GITHUB_OUTPUT"
+          git branch -f sync/upstream upstream/master
+          git push --force-with-lease origin sync/upstream:sync/upstream
+
+      - name: Open or refresh PR
+        if: steps.compare.outputs.up_to_date == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          existing=$(gh pr list --head sync/upstream --base master --state open --json number --jq '.[0].number')
+          if [ -z "$existing" ]; then
+            gh pr create \
+              --base master \
+              --head sync/upstream \
+              --title "Sync with upstream RobinLinus/snapdrop" \
+              --body "Automated sync. Merging this brings master up to date with upstream RobinLinus/snapdrop:master and will trigger a deploy once merged."
+          else
+            echo "PR #$existing already tracks the latest upstream state."
+          fi

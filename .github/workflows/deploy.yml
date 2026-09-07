@@ -1,0 +1,37 @@
+name: Deploy to CloudPanel
+
+# Triggers dploy on the CloudPanel server over SSH. dploy pulls the code
+# itself (git clone on the server), this workflow only tells it which ref to
+# deploy. See deploy/README.md for the one-time CloudPanel + secrets setup.
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch or tag to deploy'
+        required: false
+        default: master
+
+concurrency:
+  group: cloudpanel-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: dploy deploy over SSH
+        # Pin to a specific commit SHA instead of a major-version tag for
+        # stricter supply-chain security if your policy requires it.
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.CLOUDPANEL_SSH_HOST }}
+          port: ${{ secrets.CLOUDPANEL_SSH_PORT || 22 }}
+          username: ${{ secrets.CLOUDPANEL_SSH_USER }}
+          key: ${{ secrets.CLOUDPANEL_SSH_KEY }}
+          script: |
+            set -e
+            # Login shell (-l) so nvm-managed node/npm/pm2 are on PATH.
+            bash -lc 'dploy deploy "${{ inputs.ref || github.ref_name }}"'

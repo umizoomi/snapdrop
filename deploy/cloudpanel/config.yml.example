@@ -1,0 +1,22 @@
+# dploy config for Snapdrop on CloudPanel.
+#
+# Copy to ~/.dploy/config.yml on the CloudPanel server (as the site user) and
+# replace every SITE_USER / SITE_DOMAIN placeholder with your real values.
+# See ../README.md for the full setup walkthrough.
+#
+# Note: dploy only substitutes {release_directory} in commands, never
+# {deploy_directory} - the absolute deploy directory has to be written out
+# literally in after_commands below.
+
+project:
+  git_repository: 'git@github.com:umizoomi/snapdrop.git'
+  deploy:
+    directory: '/home/SITE_USER/htdocs/SITE_DOMAIN'
+    shared_directories:
+      # Snapdrop is stateless - no files need to persist across releases.
+    before_commands: # Runs in {release_directory}, before the "current" symlink switches
+      - 'cd {release_directory}/server && npm ci --omit=dev'
+    after_commands: # Runs after the "current" symlink switches to the new release
+      - 'pm2 delete snapdrop-server > /dev/null 2>&1 || true'
+      - 'pm2 start /home/SITE_USER/htdocs/SITE_DOMAIN/current/ecosystem.config.js'
+      - 'pm2 save'
