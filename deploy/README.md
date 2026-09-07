@@ -52,7 +52,8 @@ Note the generated **Site User** - all further steps run as that user.
 
 ```bash
 ssh SITE_USER@your-server
-nvm install 18          # or whatever version you picked above
+nvm install 18           # or whatever version you picked above
+nvm alias default 18     # required so `nvm use default` resolves in CI
 npm install pm2@latest -g
 ```
 
@@ -191,6 +192,12 @@ password manager - don't leave it on disk.
 
 Nothing else to configure for these - they use the built-in
 `GITHUB_TOKEN`, no extra secrets needed.
+
+`deploy.yml` explicitly sources `~/.nvm/nvm.sh` and runs `nvm use default`
+before calling `dploy` - a bare login shell (`bash -lc`) isn't enough,
+because nvm's init lives in `~/.bashrc`, which non-interactive SSH commands
+never source even with `-l`. If `npm`/`pm2` still aren't found in the
+workflow logs, re-check that `nvm alias default` was set (step 1.3).
 
 ### 2.4 Rolling back
 
