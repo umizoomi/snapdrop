@@ -33,5 +33,11 @@ jobs:
           key: ${{ secrets.CLOUDPANEL_SSH_KEY }}
           script: |
             set -e
-            # Login shell (-l) so nvm-managed node/npm/pm2 are on PATH.
-            bash -lc 'dploy deploy "${{ inputs.ref || github.ref_name }}"'
+            # `bash -lc` alone doesn't put nvm-managed node/npm/pm2 on PATH:
+            # nvm's init lives in ~/.bashrc, which login-but-non-interactive
+            # SSH commands never source. Source nvm.sh and activate the
+            # default version explicitly instead.
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            nvm use default
+            dploy deploy "${{ inputs.ref || github.ref_name }}"
