@@ -1,0 +1,55 @@
+# Nginx vhost for Snapdrop on a CloudPanel "Node.js" site.
+#
+# This is based on CloudPanel's own official Node.js and Static vhost templates
+# (https://github.com/cloudpanel-io/vhost-templates/tree/master/v2), adapted so
+# that:
+#   - static client assets (client/) are served directly by nginx
+#   - only WebSocket traffic under /server is proxied to the Node process
+#
+# Do NOT paste this file over your site's vhost wholesale - CloudPanel injects
+# real values for {{ssl_certificate}}, {{server_name}}, {{root}}, the access/
+# error log paths and {{settings}} that are specific to your domain. Instead,
+# open Site -> Vhost in CloudPanel (already populated with your real Node.js
+# vhost) and:
+#   1. Keep the listen/ssl/server_name/root/log/well-known/{{settings}} lines
+#      CloudPanel generated as-is.
+#   2. Replace the existing `location / { proxy_pass ...; ... }` block with
+#      the `location /server { ... }` and `location / { ... }` blocks below.
+#      Reuse the port number already used by the generated proxy_pass line
+#      (it matches the "App Port" from Site -> Node.js Settings, default 3000).
+#
+# Also set Site -> Settings -> Domain Settings -> Root Directory to:
+#   current/client
+# so {{root}} resolves to <deploy_directory>/current/client, matching dploy's
+# "current" release symlink (see ../README.md).
+
+  location /server {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_http_version 1.1;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Server $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Host $http_host;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "Upgrade";
+    proxy_pass_request_headers on;
+    proxy_connect_timeout 300;
+    proxy_read_timeout 900;
+    proxy_send_timeout 900;
+  }
+
+  location ~* ^.+\.(css|js|jpg|jpeg|gif|png|ico|gz|svg|svgz|ttf|otf|woff|woff2|eot|mp4|ogg|ogv|webm|webp|zip|swf)$ {
+    add_header Access-Control-Allow-Origin "*";
+    expires max;
+    access_log off;
+  }
+
+  location ~ /\.(ht|svn|git) {
+    deny all;
+  }
+
+  location / {
+    try_files $uri $uri/ =404;
+  }

@@ -26,3 +26,9 @@ The Github repository will stay as-is and you can still go ahead and download an
 Have any questions? Read our [FAQ](/docs/faq.md).
 
 You can [host your own instance with Docker](/docs/local-dev.md).
+
+## Production deployment (CloudPanel)
+
+This fork includes a zero-downtime deployment setup for
+[CloudPanel](https://www.cloudpanel.io/) using its `dploy` tool, driven by
+GitHub Actions on every push to `master`. See [deploy/README.md](/deploy/README.md).
